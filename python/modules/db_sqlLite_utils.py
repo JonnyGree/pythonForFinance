@@ -57,6 +57,19 @@ class db_utils:
             ON stock_data(date)
         ''')
 
+        # Create listing_status table
+        cur.execute('''
+            CREATE TABLE IF NOT EXISTS listing_status (
+                symbol TEXT PRIMARY KEY,
+                name TEXT,
+                exchange TEXT,
+                assetType TEXT,
+                ipoDate TEXT,
+                delistingDate TEXT,
+                status TEXT
+            )
+        ''')
+
         db_utils.conn.commit()
         cur.close()
 
@@ -121,3 +134,40 @@ class db_utils:
         except sqlite3.DatabaseError as error:
             print(f"Error: {error}")
             return None
+        
+    @staticmethod
+    def insert_listing_status(data):
+        """
+        Insert listing status data into the listing_status table.
+        """
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+
+        for index, row in data.iterrows():
+            cur.execute('''
+                INSERT OR IGNORE INTO listing_status (symbol, name, exchange, assetType, ipoDate, delistingDate, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                row['symbol'], row['name'], row['exchange'], row['assetType'],
+                row['ipoDate'], row['delistingDate'], row['status']
+            ))
+
+        db_utils.conn.commit()
+        cur.close()
+
+    @staticmethod
+    def get_tickers_by_exchange(exchange):
+        """
+        Retrieve all tickers listed on a specified exchange.
+        """
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+
+        cur.execute('''
+            SELECT symbol FROM listing_status WHERE exchange = ?
+        ''', (exchange,))
+
+        exchange_tickers = [row[0] for row in cur.fetchall()]
+
+        cur.close()
+        return exchange_tickers
