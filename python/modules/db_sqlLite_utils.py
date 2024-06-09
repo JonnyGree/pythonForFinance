@@ -38,7 +38,7 @@ class db_utils:
             CREATE TABLE IF NOT EXISTS stock_data (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 ticker TEXT NOT NULL,
-                date DATE NOT NULL,
+                date DATETIME  NOT NULL,
                 open REAL NOT NULL,
                 high REAL NOT NULL,
                 low REAL NOT NULL,
@@ -71,6 +71,28 @@ class db_utils:
         ''')
 
         db_utils.conn.commit()
+
+        # Create wilshire 5000 table
+        cur.execute('''
+        CREATE TABLE IF NOT EXISTS wilshire_5000 (
+            Ticker TEXT,
+            Name TEXT,
+            Sector TEXT,
+            Price REAL,
+            Dividend_Yield REAL,
+            One_Year_Dividend_Growth REAL,
+            Five_Year_Dividend_Growth_Annualized REAL,
+            Dividends_Per_Share REAL,
+            Market_Cap_M REAL,
+            Trailing_PE_Ratio REAL,
+            Payout_Ratio REAL,
+            Beta REAL,
+            Fifty_Two_Week_High REAL,
+            Fifty_Two_Week_Low REAL
+        )
+        ''')
+        db_utils.conn.commit()
+
         cur.close()
 
     @staticmethod
@@ -156,6 +178,46 @@ class db_utils:
         cur.close()
 
     @staticmethod
+    def insert_wilshire_stocks(data):   
+        data.to_sql('wilshire_5000', db_utils.conn, if_exists='replace', index=False)
+
+    @staticmethod
+    def get_wilshire_distinct_sectors():
+        # Connect to SQLite database
+        cur = db_utils.conn.cursor()
+        
+        # Query to select distinct sectors
+        cur.execute('''
+        SELECT DISTINCT Sector FROM wilshire_5000
+        WHERE Sector IS NOT NULL
+        ''')
+        
+        # Fetch all results
+        rows = cur.fetchall()
+        cur.close()
+        # Extract sectors from rows
+        sectors = [row[0] for row in rows]
+        return sectors
+
+    @staticmethod
+    def get_wilshire_stocks_by_sector(sector):
+
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+    
+        cur.execute('''
+        SELECT * FROM wilshire_5000
+        WHERE Sector = ?
+        ''', (sector,))
+       
+        # Fetch all results
+        rows = cur.fetchall()
+        cur.close()   
+        return rows
+        
+
+
+    @staticmethod
     def get_tickers_by_exchange(exchange):
         """
         Retrieve all tickers listed on a specified exchange.
@@ -171,3 +233,4 @@ class db_utils:
 
         cur.close()
         return exchange_tickers
+    
