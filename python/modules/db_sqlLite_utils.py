@@ -183,7 +183,7 @@ class db_utils:
 
     @staticmethod
     def get_wilshire_distinct_sectors():
-        # Connect to SQLite database
+        db_utils.connect()
         cur = db_utils.conn.cursor()
         
         # Query to select distinct sectors
@@ -199,9 +199,20 @@ class db_utils:
         sectors = [row[0] for row in rows]
         return sectors
 
-    @staticmethod
-    def get_wilshire_stocks_by_sector(sector):
+    def get_wilshire_ticker():
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+        cur.execute('''
+        SELECT DISTINCT Ticker FROM wilshire_5000
+        WHERE Ticker IS NOT NULL
+        ''')
+        # Fetch all results
+        tickers = [row[0] for row in cur.fetchall()]
+        cur.close()
+        return tickers
 
+    @staticmethod
+    def get_wilshire_ticker_by_sector(sector):
         db_utils.connect()
         cur = db_utils.conn.cursor()
     
@@ -211,11 +222,9 @@ class db_utils:
         ''', (sector,))
        
         # Fetch all results
-        rows = cur.fetchall()
-        cur.close()   
-        return rows
-        
-
+        tickers = [row[0] for row in cur.fetchall()]
+        cur.close()
+        return tickers
 
     @staticmethod
     def get_tickers_by_exchange(exchange):
