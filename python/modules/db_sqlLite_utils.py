@@ -75,7 +75,7 @@ class db_utils:
         # Create wilshire 5000 table
         cur.execute('''
         CREATE TABLE IF NOT EXISTS wilshire_5000 (
-            Ticker TEXT,
+            Ticker TEXT UNIQUE,
             Name TEXT,
             Sector TEXT,
             Price REAL,
@@ -123,6 +123,24 @@ class db_utils:
             cur.close()
             return 1
         cur.close()
+
+    
+    @staticmethod
+    def get_ticker_from_stock():
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+        
+        # Query to select distinct sectors
+        cur.execute('''
+        SELECT DISTINCT ticker FROM stock_data
+        ''')
+        
+        # Fetch all results
+        rows = cur.fetchall()
+        cur.close()
+        # Extract sectors from rows
+        sectors = [row[0] for row in rows]
+        return sectors
 
     @staticmethod
     def get_data_from_db(ticker, start=None, end=None):
