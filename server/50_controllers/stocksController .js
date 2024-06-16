@@ -1,7 +1,7 @@
 const stocksService  = require('../200_services/stocksService');
 
 const getStocksData = async (req, res) => {
-    const { ticker } = req.body;
+    const { ticker, startDate, endDate } = req.body;
 
     console.log(ticker)
     if (!ticker) {
@@ -9,7 +9,7 @@ const getStocksData = async (req, res) => {
     }
   
     try {
-      const data = await stocksService.getStocksDataByTicker(ticker);
+      const data = await stocksService.getStocksDataByTicker(ticker, startDate, endDate);
       console.log(data)
       res.json(data);
     } catch (error) {

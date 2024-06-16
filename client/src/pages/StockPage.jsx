@@ -28,9 +28,12 @@ const StockPage = () => {
   }, []);
 
   const fetchStockData = async () => {
+    const startDate = '2020-01-01'; // Replace with your desired fixed start date
+  
     try {
       const response = await axios.post(API_GET_STOCK_DATA_URL, {
-        ticker: selectedTicker
+        ticker: selectedTicker,
+        startDate: startDate  // Include the fixed startDate here
       });
       setStockData(response.data);
     } catch (error) {

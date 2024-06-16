@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime # Import datetime class from datetime module
 
-from db_sqlLite_utils import db_utils
+from db_postgres_utils import db_utils
 
 class processdata:
     
@@ -53,6 +53,7 @@ class processdata:
             print(sm_date, " ", last_date)
         except Exception:
             print("Date Corrupted")
+            return -1, -1
         else:
             return sm_date, last_date
 

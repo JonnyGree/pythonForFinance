@@ -29,6 +29,7 @@ class db_utils:
     }
     
     conn = None
+    
 
     @staticmethod
     def connect():
@@ -220,12 +221,8 @@ class db_utils:
             df = pd.DataFrame(data, columns=columns)
 
             # Remove rows with NaN values
-            df = df.dropna(axis=1, how='all')
+            return df.dropna(axis=1, how='all')
 
-            # Convert 'date' column to datetime format
-            df['date'] = pd.to_datetime(df['date'])
-
-            return df
         except psycopg2.DatabaseError as error:
             db_utils.logger.error(f"Error: {error}")
             return None
@@ -291,6 +288,7 @@ class db_utils:
             # Fetch all results
             rows = cur.fetchall()
             sectors = [row[0] for row in rows]
+            sectors = [x for x in sectors if x and x != 'NaN' ] # remove NaN
             return sectors
         except psycopg2.DatabaseError as error:
             db_utils.logger.error(f"Error: {error}")
@@ -312,19 +310,23 @@ class db_utils:
         return tickers
 
     @staticmethod
-    def get_wilshire_ticker_by_sector(sector):
+    def get_wilshire_df_by_sector(sector):
         db_utils.connect()
         cur = db_utils.conn.cursor()
-    
+
         cur.execute('''
         SELECT * FROM wilshire_5000
         WHERE Sector = %s
         ''', (sector,))
-       
+        
         # Fetch all results
-        tickers = [row[0] for row in cur.fetchall()]
+        rows = cur.fetchall()
+        # Fetch column names
+        colnames = [desc[0] for desc in cur.description]
         cur.close()
-        return tickers
+        # Create DataFrame
+        df = pd.DataFrame(rows, columns=colnames)
+        return df
 
     @staticmethod
     def get_tickers_by_exchange(exchange):
@@ -342,3 +344,101 @@ class db_utils:
 
         cur.close()
         return exchange_tickers
+    
+    @staticmethod
+    def check_and_add_column(column_name):
+        """
+        Check if a column exists in the stock_returns table. If not, add it.
+        
+        Parameters:
+        conn (connection object): psycopg2 connection object.
+        column_name (str): The name of the column to check/add.
+        """
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+        try:
+            # Check if the column exists
+            cur.execute(f"""
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name='stock_returns' AND column_name=%s;
+            """, (column_name,))
+            column_exists = cur.fetchone()
+            
+            # Add the column if it does not exist
+            if not column_exists:
+                cur.execute(f"""
+                ALTER TABLE stock_returns 
+                ADD COLUMN {column_name} NUMERIC;
+                """)
+        except Exception as e:
+            db_utils.logger.error(f"Error checking/adding column {column_name}: {e}")
+            cur.rollback()
+    
+    @staticmethod
+    def insert_stock_data(year, df):
+        """
+        Insert stock data into the stock_returns table. If the column for the given year does not exist,
+        create it and then insert the data.
+
+        Parameters:
+        year (int): The year for which the data is being inserted.
+        df (DataFrame): A DataFrame containing columns: 'stock', 'sector', 'return'.
+        """
+        # Define the column name based on the year
+        return_column = f'return_{year}'
+        
+        # Get a database connection
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+        
+        try:
+            # Check and add the column if necessary
+            db_utils.check_and_add_column(return_column)
+            
+            # Prepare the SQL statement
+            insert_sql = f"""
+            INSERT INTO stock_returns (ticker, sector, {return_column})
+            VALUES %s
+            ON CONFLICT (ticker) DO UPDATE SET {return_column} = EXCLUDED.{return_column}
+            """
+            
+            # Prepare the data for insertion
+            data = [(row['ticker'], row['sector'], row['ROI']) for _, row in df.iterrows()]
+            
+            # Execute the insert statement using execute_values
+            extras.execute_values(cur, insert_sql, data)
+        except Exception as e:
+            db_utils.logger.error(f"Error inserting stock data for year {year}: {e}")
+            cur.rollback()
+
+    @staticmethod
+    def get_stock_returns(year, sector):
+        """
+        Fetch stock returns for a given year and sector from the stock_returns table.
+        
+        Parameters:
+        year (int): The year for which the data is being fetched.
+        sector (str): The sector for which the data is being fetched.
+        
+        Returns:
+        DataFrame: A DataFrame containing the stock returns for the specified year and sector.
+        """
+        # Define the column name based on the year
+        return_column = f'return_{year}'
+        
+        # Get a database connection
+        db_utils.connect()
+        cur = db_utils.conn.cursor()
+        try:
+            query = f"""
+            SELECT ticker, sector, {return_column} AS return
+            FROM stock_returns
+            WHERE sector = %s AND {return_column} IS NOT NULL;
+            """
+            cur.execute(query, (sector,))
+            rows = cur.fetchall()
+            return pd.DataFrame(rows, columns=['ticker', 'sector', 'return'])
+        except Exception as e:
+            db_utils.logger.error(f"Error fetching stock returns for year {year} and sector {sector}: {e}")
+            return pd.DataFrame()
