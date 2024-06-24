@@ -38,7 +38,44 @@ const getAllDistinctTickers = async () => {
   }
 };
 
+const getTopStocksByROI = async (year, ticker, sector) => {
+  try {
+      let query = `SELECT ticker, sector, return_${year} AS roi FROM stock_returns WHERE return_${year} IS NOT NULL`;
+      const queryParams = [];
+
+      if (ticker) {
+          query += ` AND ticker = $${queryParams.length + 1}`;
+          queryParams.push(ticker);
+      }
+      if (sector) {
+          query += ` AND sector = $${queryParams.length + 1}`;
+          queryParams.push(sector);
+      }
+
+      query += ` ORDER BY return_${year} DESC LIMIT 10`;
+
+      const { rows } = await pool.query(query, queryParams);
+      return rows;
+  } catch (error) {
+      console.error('Error fetching top stocks by ROI:', error);
+      throw error;
+  }
+};
+
+const getAllDistinctSectors = async () => {
+  try {
+    const query = 'SELECT DISTINCT sector FROM stock_returns';
+    const { rows } = await pool.query(query);
+    return rows.map(row => row.sector);
+  } catch (error) {
+    console.error('Error fetching distinct sectors:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getStocksDataByTicker,
   getAllDistinctTickers,
+  getTopStocksByROI,
+  getAllDistinctSectors,
 };

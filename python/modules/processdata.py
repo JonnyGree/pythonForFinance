@@ -22,18 +22,6 @@ class processdata:
         return df.loc[mask]['daily_return'].sum()
 
     @staticmethod
-    def get_roi_defined_time(df, start_date, end_date):
-        df['date'] = pd.to_datetime(df['date'])
-        start_val = df[df['date'] == start_date]['adj_close']
-        print("Initial Price :", start_val)
-        end_val = df[df['date'] == end_date]['adj_close']
-        print("End Price :", end_val)
-        # # Calculate return on investment
-        roi = (end_val - start_val) / start_val
-        # # Return the total return between 2 dates
-        return start_val
-
-    @staticmethod
     def formatDateDt(year, month, day):
         return datetime(year, month, day)
     
@@ -60,14 +48,13 @@ class processdata:
     @staticmethod
     def get_roi_defined_time(df, start_date, end_date):
         start_val = df[df['date'] ==  start_date]['adj_close'].values[0]
-        #print("Initial Price :", start_val)
+        print("Initial Price :", start_val)
         
         end_val = df[df['date'] == end_date]['adj_close'].values[0]
-        #print("End Price :", end_val)
+        print("End Price :", end_val)
 
         # # Calculate return on investment
-        roi = (end_val - start_val) / start_val
-        return roi
+        return (end_val - start_val) / start_val
 
     @staticmethod
     def get_mean_between_dates(df, sdate, edate):

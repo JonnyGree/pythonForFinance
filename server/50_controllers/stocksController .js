@@ -28,7 +28,30 @@ const getStocksData = async (req, res) => {
     }
   };
 
+  const getTopStocksByROI = async (req, res) => {
+    const { year, ticker, sector } = req.query;
+    try {
+        const topStocks = await stocksService.getTopStocksByROI(year, ticker, sector);
+        res.json(topStocks);
+    } catch (error) {
+        console.error('Error fetching top stocks by ROI:', error);
+        res.status(500).json({ error: 'An error occurred while fetching top stocks by ROI' });
+    }
+};
+
+const getAllSectors = async (req, res) => {
+  try {
+    const sectors = await stocksService.getAllDistinctSectors();
+    res.json(sectors);
+  } catch (error) {
+    console.error('Error fetching distinct sectors:', error);
+    res.status(500).json({ error: 'An error occurred while fetching distinct sectors' });
+  }
+};
+
  module.exports = {
   getStocksData,
-  getAllTickers
+  getAllTickers,
+  getTopStocksByROI,
+  getAllSectors
 };
